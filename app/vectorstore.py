@@ -25,3 +25,22 @@ def get_vectorstore():
             allow_dangerous_deserialization=True
         )
     return vector_db
+
+   
+def add_texts(texts: list[str], metadatas: list[dict]):
+    global vector_db
+
+    if vector_db is None:
+        vector_db = FAISS.from_texts(
+            texts=texts,
+            embedding=embeddings,
+            metadatas=metadatas
+        )
+    else:
+        vector_db.add_texts(
+            texts=texts,
+            metadatas=metadatas
+        )
+
+    vector_db.save_local(VECTOR_DIR)
+
