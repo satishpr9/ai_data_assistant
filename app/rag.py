@@ -1,35 +1,61 @@
-from langchain_community.llms import HuggingFaceHub
-from langchain_huggingface import HuggingFaceEndpoint,ChatHuggingFace
+from langchain_huggingface import HuggingFaceEndpoint, ChatHuggingFace
 from langchain_classic.chains import RetrievalQA
-from app.vectorstore import get_vectorstore
-import os 
+from app.vectorstore import get_hybrid_retriever
+import os
 
-#RAG PIPELINE
+
 def ask_question(question):
-    vector_db=get_vectorstore()
-
-    if vector_db is None:
-        return " No documents ingested yet"
+    """
+    RAG (Retrieval-Augmented Generation) pipeline with HYBRID SEARCH
     
-    model=HuggingFaceEndpoint(
+    Process:
+    1. Get hybrid retriever (FAISS + BM25)
+    2. Initialize language model
+    3. Create RetrievalQA chain
+    4. Invoke with question
+    
+    Args:
+        question: user's question to answer
+    
+    Returns:
+        string: LLM answer based on retrieved documents
+    
+    Example:
+        >>> answer = ask_question("Tell me about Q3 sales")
+        >>> print(answer)
+    """
+    
+    # Step 1: Get hybrid retriever combining semantic + keyword search
+    retriever = get_hybrid_retriever(k=3)
+    
+    if retriever is None:
+        return "No documents ingested yet. Please upload PDFs or ingest data first."
+    
+    # Step 2: Initialize HuggingFace language model
+    model = HuggingFaceEndpoint(
         repo_id="HuggingFaceH4/zephyr-7b-beta",
-        task="converstional",
+        task="conversational",
         huggingfacehub_api_token=os.getenv("HUGGINGFACEHUB_API_TOKEN"),
-        temperature=0.2,
-        max_new_tokens=512,
-        top_p= 0.95,
-        repetition_penalty=1.15,
-        model_kwargs={
-            }
+        temperature=0.2,  # Lower = more focused answers
+        max_new_tokens=512,  # Max response length
+        top_p=0.95,  # Nucleus sampling
+        repetition_penalty=1.15,  # Avoid repetition
     )
-
+    
+    # Step 3: Create chat wrapper
     chat = ChatHuggingFace(llm=model, verbose=True)
-
-    qa=RetrievalQA.from_chain_type(
+    
+    # Step 4: Create RetrievalQA chain
+    # This chains: retrieve documents -> create context -> generate answer
+    qa = RetrievalQA.from_chain_type(
         llm=chat,
-        chain_type="stuff",
-        retriever=vector_db.as_retriever(search_kwargs={"k":3}),
-        return_source_documents=False)
-    result=qa.invoke({"query":question})
+        chain_type="stuff",  # Simple chain type (concatenates all docs)
+        retriever=retriever,
+        return_source_documents=False
+    )
+    
+    # Step 5: Invoke the chain with the question
+    result = qa.invoke({"query": question})
+    
+    print(f"✓ RAG answered question: '{question}'")
     return result["result"]
-

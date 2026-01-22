@@ -19,9 +19,9 @@ def ingest_business_data():
 
     for _, row in df.iterrows():
         text = (
-            f"Customer {row.customer_name} made a {row.finance} "
-            f"purchase of {row.purchase} worth {row.amount} "
-            f"in {row.monthly}. Sales count: {row.sales}."
+            f"Customer {row.customer_name} made a {row.finance_type} "
+            f"purchase of {row.product} worth {row.amount} "
+            f"in {row.month}. Sales count: {row.quantity}."
         )
 
         texts.append(text)
@@ -29,8 +29,8 @@ def ingest_business_data():
             "source": "mysql",
             "table": "business_data",
             "customer": row.customer_name,
-            "month": row.monthly,
-            "finance": row.finance
+            "month": row.month,
+            "finance": row.finance_type
         })
 
     add_texts(texts=texts, metadatas=metadatas)
