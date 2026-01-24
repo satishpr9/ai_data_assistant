@@ -1,4 +1,4 @@
-# ai_data_assistant
+# ai_data_assistant(ON GOING PROJECT)
 🧠 AI Data Assistant
 
 An intelligent FastAPI-based backend for conversational analytics over documents and databases.
