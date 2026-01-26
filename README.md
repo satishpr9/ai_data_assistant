@@ -1,3 +1,7 @@
+<<<<<<< HEAD
+=======
+# ai_data_assistant(ON GOING PROJECT)
+>>>>>>> 6779815cba2606c454a62ab484feb50aa79ff1e6
 🧠 AI Data Assistant
 
 An intelligent FastAPI-based backend for conversational analytics over documents and databases.
