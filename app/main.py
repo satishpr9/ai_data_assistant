@@ -1,4 +1,7 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException, Depends, status
+from dotenv import load_dotenv
+
+load_dotenv(override=True)
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
@@ -6,12 +9,14 @@ from typing import List
 import shutil
 import json
 from typing import Optional
+from datetime import timedelta, datetime
 from app.database import get_db, init_db, User, Conversation, Message
 from app.auth import (
     hash_password, 
     verify_password, 
     create_access_token, 
     get_current_user,
+    get_current_admin,
     ACCESS_TOKEN_EXPIRE_MINUTES
 )
 from app.schemas import (
@@ -25,23 +30,32 @@ from app.schemas import (
     MessageResponse,
     QueryRequest
 )
-from app.ingest import ingest_pdf
+from app.ingest import ingest_file
 from app.sql_ingest import ingest_business_data
 from app.intent import is_chart_query, is_aggregation_query
 from app.router import handle_chart_query
 from app.analytics import top_customer
 from app.rag_stream import ask_question_streaming
-from datetime import timedelta, datetime
+
+# LangChain Caching
+from langchain_classic.globals import set_llm_cache
+from langchain_community.cache import SQLiteCache
+import os
 
 app = FastAPI(title="AI Data Assistant")
 
 # Initialize database
 init_db()
 
+# Initialize LLM Cache
+if not os.path.exists(".cache.db"):
+    print("Creating new LLM cache database...")
+set_llm_cache(SQLiteCache(database_path=".cache.db"))
+
 # CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -62,19 +76,20 @@ def register(user_data: UserCreate, db: Session = Depends(get_db)):
     if db.query(User).filter(User.email == user_data.email).first():
         raise HTTPException(status_code=400, detail="Email already registered")
     
-    # Create user
+    # Create user (default role is 'user')
     user = User(
         username=user_data.username,
         email=user_data.email,
-        hashed_password=hash_password(user_data.password)
+        hashed_password=hash_password(user_data.password),
+        role="user" 
     )
     
     db.add(user)
     db.commit()
     db.refresh(user)
     
-    # Create access token
-    access_token = create_access_token(data={"sub": user.username})
+    # Create access token (include role in payload if needed, but we fetch from DB)
+    access_token = create_access_token(data={"sub": user.username, "role": user.role})
     
     return {
         "access_token": access_token,
@@ -98,12 +113,25 @@ def login(credentials: UserLogin, db: Session = Depends(get_db)):
     if not user.is_active:
         raise HTTPException(status_code=400, detail="Inactive user")
     
-    access_token = create_access_token(data={"sub": user.username})
+    # Include role in token
+    access_token = create_access_token(data={"sub": user.username, "role": user.role})
     
     return {
         "access_token": access_token,
         "token_type": "bearer",
         "user": user
+    }
+
+# ...
+
+@app.post("/ingest/mysql")
+def ingest_mysql(current_user: User = Depends(get_current_admin)):
+    """Ingest MySQL data (admin only)"""
+    
+    rows = ingest_business_data()
+    return {
+        "status": "success",
+        "rows_ingested": rows
     }
 
 
@@ -179,11 +207,15 @@ def get_conversation(
         Conversation.id == conversation_id,
         Conversation.user_id == current_user.id
     ).first()
+    
+    if not conversation:
+        raise HTTPException(status_code=404, detail="Conversation not found")
     messages = []
 
     for msg in conversation.messages:
         messages.append({
         "id": msg.id,
+        "conversation_id": msg.conversation_id,
         "role": msg.role,
         "content": msg.content,
         "mode": msg.mode,
@@ -364,28 +396,28 @@ async def ask_stream(
 # ==================== FILE UPLOAD ====================
 
 @app.post("/upload")
-async def upload_pdf(
+async def upload_file(
     file: UploadFile = File(...),
     current_user: User = Depends(get_current_user)
 ):
-    """Upload PDF (protected)"""
+    """Upload file (protected) - Supports PDF, TXT, MD, DOCX, CSV, JSON"""
     
     file_path = f"data/uploads/{current_user.id}_{file.filename}"
     
     with open(file_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
     
-    chunks = ingest_pdf(file_path)
+    chunks = ingest_file(file_path)
     
     return {
-        "message": "PDF submitted successfully",
+        "message": "File submitted successfully",
         "chunks_created": chunks
     }
 
 
 @app.post("/ingest/mysql")
-def ingest_mysql(current_user: User = Depends(get_current_user)):
-    """Ingest MySQL data (protected)"""
+def ingest_mysql(current_user: User = Depends(get_current_admin)):
+    """Ingest MySQL data (admin only)"""
     
     rows = ingest_business_data()
     return {

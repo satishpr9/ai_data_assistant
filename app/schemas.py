@@ -1,5 +1,5 @@
 from pydantic import BaseModel, EmailStr, Field
-from typing import Optional, List
+from typing import Optional, List, Any
 from datetime import datetime
 
 
@@ -24,6 +24,7 @@ class UserResponse(BaseModel):
     id: int
     username: str
     email: str
+    role: str
     created_at: datetime
     
     class Config:
@@ -66,7 +67,7 @@ class MessageResponse(BaseModel):
     role: str
     content: str
     mode: str
-    meta: Optional[str]
+    metadata: Optional[Any] = None
     created_at: datetime
     
     class Config:

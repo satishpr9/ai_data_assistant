@@ -1,0 +1,5 @@
+INFO:httpx:HTTP Request: POST https://router.huggingface.co/v1/chat/completions "HTTP/1.1 401 Unauthorized"
+Invoking ChatOpenAI...
+DEBUG: Request Headers: Headers({'host': 'router.huggingface.co', 'accept-encoding': 'gzip, deflate, zstd', 'connection': 'keep-alive', 'accept': 'application/json', 'content-type': 'application/json', 'user-agent': 'OpenAI/Python 2.20.0', 'x-stainless-lang': 'python', 'x-stainless-package-version': '2.20.0', 'x-stainless-os': 'Windows', 'x-stainless-arch': 'other:amd64', 'x-stainless-runtime': 'CPython', 'x-stainless-runtime-version': '3.12.8', 'authorization': '[secure]', 'x-stainless-async': 'false', 'x-stainless-raw-response': 'true', 'x-stainless-retry-count': '0', 'content-length': '109'})
+DEBUG: Request Body: b'{"messages":[{"content":"Hello","role":"user"}],"model":"meta-llama/Meta-Llama-3-8B-Instruct","stream":false}'
+Error: Error code: 401 - {'error': 'Invalid username or password.'}

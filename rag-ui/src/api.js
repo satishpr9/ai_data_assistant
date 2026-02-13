@@ -21,16 +21,16 @@ export const register = async (username, email, password) => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, email, password }),
     });
-    
+
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.detail || 'Registration failed');
     }
-    
+
     const data = await response.json();
     localStorage.setItem('token', data.access_token);
     localStorage.setItem('user', JSON.stringify(data.user));
-    
+
     return { success: true, user: data.user };
   } catch (err) {
     return { success: false, error: err.message };
@@ -44,16 +44,16 @@ export const login = async (username, password) => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, password }),
     });
-    
+
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.detail || 'Login failed');
     }
-    
+
     const data = await response.json();
     localStorage.setItem('token', data.access_token);
     localStorage.setItem('user', JSON.stringify(data.user));
-    
+
     return { success: true, user: data.user };
   } catch (err) {
     return { success: false, error: err.message };
@@ -81,7 +81,7 @@ export const getConversations = async () => {
     const response = await fetch(`${API_BASE_URL}/conversations`, {
       headers: authHeaders(),
     });
-    
+
     if (!response.ok) throw new Error('Failed to fetch conversations');
     return await response.json();
   } catch (err) {
@@ -100,7 +100,7 @@ export const createConversation = async (title = 'New Conversation') => {
       },
       body: JSON.stringify({ title }),
     });
-    
+
     if (!response.ok) throw new Error('Failed to create conversation');
     return await response.json();
   } catch (err) {
@@ -115,7 +115,7 @@ export const getConversation = async (conversationId) => {
       `${API_BASE_URL}/conversations/${conversationId}`,
       { headers: authHeaders() }
     );
-    
+
     if (!response.ok) throw new Error('Failed to fetch conversation');
     return await response.json();
   } catch (err) {
@@ -133,7 +133,7 @@ export const deleteConversation = async (conversationId) => {
         headers: authHeaders(),
       }
     );
-    
+
     if (!response.ok) throw new Error('Failed to delete conversation');
     return { success: true };
   } catch (err) {
@@ -150,7 +150,7 @@ export const updateConversationTitle = async (conversationId, title) => {
         headers: authHeaders(),
       }
     );
-    
+
     if (!response.ok) throw new Error('Failed to update title');
     return { success: true };
   } catch (err) {
@@ -171,7 +171,7 @@ export const sendQueryStream = async (
     const url = conversationId
       ? `${API_BASE_URL}/ask/stream?conversation_id=${conversationId}`
       : `${API_BASE_URL}/ask/stream`;
-    
+
     const response = await fetch(url, {
       method: 'POST',
       headers: {
@@ -186,7 +186,7 @@ export const sendQueryStream = async (
     }
 
     const contentType = response.headers.get('content-type');
-    
+
     if (!contentType || !contentType.includes('text/event-stream')) {
       const data = await response.json();
       onComplete(data);
@@ -199,23 +199,23 @@ export const sendQueryStream = async (
 
     while (true) {
       const { done, value } = await reader.read();
-      
+
       if (done) break;
 
       buffer += decoder.decode(value, { stream: true });
-      
+
       const events = buffer.split('\n\n');
       buffer = events.pop() || '';
 
       for (const event of events) {
         if (!event.trim()) continue;
-        
+
         const line = event.replace(/^data: /, '');
         if (!line) continue;
 
         try {
           const data = JSON.parse(line);
-          
+
           if (data.type === 'token') {
             onToken(data.content);
           } else if (data.type === 'end') {
@@ -233,9 +233,9 @@ export const sendQueryStream = async (
   }
 };
 
-// ==================== PDF UPLOAD ====================
+// ==================== FILE UPLOAD ====================
 
-export const uploadPDF = async (file) => {
+export const uploadFile = async (file) => {
   try {
     const formData = new FormData();
     formData.append('file', file);
@@ -265,7 +265,7 @@ export const ingestBusinessData = async () => {
       method: 'POST',
       headers: authHeaders(),
     });
-    
+
     if (!response.ok) throw new Error('Ingest failed');
     return await response.json();
   } catch (err) {

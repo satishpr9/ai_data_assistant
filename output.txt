@@ -1,0 +1,7 @@
+Testing https://router.huggingface.co/hf-inference/models/gpt2...
+Status: 404
+Body: Not Found
+--------------------
+Testing https://router.huggingface.co/v1/chat/completions...
+Status: 200
+Body: data: {"id":"94da22ac2ab74c8c8b3bca233e97d081","object":"chat.completion.chunk","created":1770917389,"model":"meta-llama/llama-3-8b-instruct","choices":[{"index":0,"delta":{"role":"assistant"},"finish

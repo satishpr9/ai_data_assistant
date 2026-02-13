@@ -22,6 +22,7 @@ class User(Base):
     hashed_password = Column(String(255), nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     is_active = Column(Boolean, default=True)
+    role = Column(String(20), default="user")  # 'user' or 'admin'
     
     # Relationships
     conversations = relationship("Conversation", back_populates="user", cascade="all, delete-orphan")
